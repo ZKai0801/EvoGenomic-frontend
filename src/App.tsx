@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Sidebar, ChatArea, AgentWorkPanel, ProjectView, AuthGuard, useAuth, WorkspacePanel } from '@/components';
+import { Sidebar, ChatArea, ProjectView, AuthGuard, useAuth, WorkspacePanel } from '@/components';
 import LoginPromptModal from '@/components/LoginPromptModal';
 import { LoginPage } from '@/components/LoginPage';
 import { RegisterPage } from '@/components/RegisterPage';
 import { ForgotPasswordPage } from '@/components/ForgotPasswordPage';
-import { Message, ModuleType, ChatSession, AgentWorkStep, Project, QuestionData, PlanData, ReferencedFile, StepOutput, ToolCallInfo } from '@/types';
+import { Message, ModuleType, ChatSession, Project, QuestionData, PlanData, ReferencedFile, StepOutput, ToolCallInfo } from '@/types';
 import { generateId } from '@/data/mockData';
 import { agentApiClient, chatApiClient, authApiClient, AgentType, ChatSessionResponse, ChatMessageResponse, ProjectResponse } from '@/api';
 
@@ -52,12 +52,9 @@ function MainApp() {
   const [currentModule, setCurrentModule] = useState<ModuleType>('chat');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(false);
-  const [agentWorkSteps, setAgentWorkSteps] = useState<AgentWorkStep[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | undefined>(undefined);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
-  const [agentStatus, setAgentStatus] = useState<any>(null);
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(undefined);
@@ -151,9 +148,6 @@ function MainApp() {
     // 手动切换模块时重置以获得干净的上下文
     setSessionId(undefined);
     setMessages([]);
-    setAgentWorkSteps([]);
-    setIsAgentPanelOpen(false);
-    setAgentStatus(null);
     setCurrentChatId(undefined);
   }, [currentModule]);
 
@@ -182,51 +176,6 @@ function MainApp() {
   const handleWorkspaceFileSelect = useCallback((path: string, name: string) => {
     handleAddReferencedFile({ name, workspacePath: path, source: 'workspace' });
   }, [handleAddReferencedFile]);
-
-  // 在数据库中创建或更新会话
-  const syncSessionToDb = useCallback(async (
-    msgs: Message[], 
-    title: string,
-    projectId?: string
-  ): Promise<number | null> => {
-    if (!authApiClient.isAuthenticated()) return null;
-    
-    try {
-      if (dbSessionIdRef.current) {
-        // 更新现有会话标题
-        await chatApiClient.updateSession(dbSessionIdRef.current, { title: title });
-        return dbSessionIdRef.current;
-      } else {
-        // 创建新会话
-        const session = await chatApiClient.createSession({
-          title: title,
-          project_id: projectId ? parseInt(projectId, 10) : undefined,
-        });
-        dbSessionIdRef.current = session.id;
-        return session.id;
-      }
-    } catch (error) {
-      console.error('同步会话失败:', error);
-      return null;
-    }
-  }, [currentModule]);
-
-  // 保存消息到数据库
-  const saveMessageToDb = useCallback(async (
-    message: Message,
-    sessionDbId: number
-  ) => {
-    if (!authApiClient.isAuthenticated()) return;
-    
-    try {
-      await chatApiClient.addMessage(sessionDbId, {
-        role: message.role as 'user' | 'assistant' | 'system' | 'tool',
-        content: message.content,
-      });
-    } catch (error) {
-      console.error('保存消息失败:', error);
-    }
-  }, []);
 
   // 更新本地聊天历史状态
   const updateLocalChatHistory = useCallback((chatId: string, msgs: Message[], projectId?: string, chatTitle?: string) => {
@@ -266,9 +215,6 @@ function MainApp() {
     setSessionId(undefined);
     dbSessionIdRef.current = null;
     setIsLoading(false);
-    setIsAgentPanelOpen(false);
-    setAgentWorkSteps([]);
-    setAgentStatus(null);
     setStepOutputs(new Map());
     setToolCalls(new Map());
     setReferencedFiles([]);
@@ -286,8 +232,6 @@ function MainApp() {
     setSessionId(chat.chatId || undefined);
     dbSessionIdRef.current = parseInt(chat.id, 10) || null;
     setIsLoading(false);
-    setIsAgentPanelOpen(false);
-    setAgentWorkSteps([]);
     setStepOutputs(new Map());
     setToolCalls(new Map());
     setReferencedFiles([]);
@@ -575,16 +519,6 @@ function MainApp() {
     ));
   }, []);
 
-  // 获取项目下的对话列表
-  const getProjectChats = useCallback((projectId: string) => {
-    return chatHistory.filter(c => c.projectId === projectId);
-  }, [chatHistory]);
-
-  // 获取未归类的对话（不属于任何项目的对话）
-  const getUncategorizedChats = useCallback(() => {
-    return chatHistory.filter(c => !c.projectId);
-  }, [chatHistory]);
-
   const handleSendMessage = useCallback(async (content: string) => {
     if (isGuest) {
       setShowLoginPrompt(true);
@@ -599,7 +533,6 @@ function MainApp() {
     };
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
-    setIsAgentPanelOpen(true);
     setStepOutputs(new Map());
     setToolCalls(new Map());
 
@@ -959,19 +892,9 @@ function MainApp() {
         return [...filtered, errorMessage];
       });
 
-      // 添加错误工作步骤
-      setAgentWorkSteps(prev => [...prev, {
-        id: generateId(),
-        type: 'error',
-        title: '处理出错',
-        content: error instanceof Error ? error.message : '未知错误',
-        status: 'error',
-        timestamp: new Date(),
-      }]);
-
       setIsLoading(false);
     }
-  }, [isGuest, currentModule, sessionId, currentChatId, currentProjectId, syncSessionToDb, updateLocalChatHistory]);
+  }, [isGuest, currentModule, sessionId, currentChatId, currentProjectId, updateLocalChatHistory]);
 
   // Plan 确认回调
   const handlePlanConfirm = useCallback((plan: PlanData) => {

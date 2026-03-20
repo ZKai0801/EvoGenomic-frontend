@@ -2,10 +2,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Copy, Check } from 'lucide-react';
-import { useState, useCallback, useMemo, ReactNode } from 'react';
+import { lazy, Suspense, useMemo, ReactNode } from 'react';
 import 'katex/dist/katex.min.css';
 
 interface MarkdownRendererProps {
@@ -38,54 +35,25 @@ function preprocessLaTeX(content: string): string {
   return processed;
 }
 
-// 代码块组件
-function CodeBlock({ 
-  language, 
-  children 
-}: { 
-  language: string | undefined; 
+const AsyncCodeBlockRenderer = lazy(() => import('./AsyncCodeBlockRenderer'));
+
+function CodeBlock({
+  language,
+  children,
+}: {
+  language: string | undefined;
   children: string;
 }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(children);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [children]);
-
   return (
-    <div className="relative group my-3">
-      <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={handleCopy}
-          className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 hover:text-white transition-colors"
-          title={copied ? '已复制' : '复制代码'}
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-        </button>
-      </div>
-      {language && (
-        <div className="absolute left-3 top-0 -translate-y-1/2 px-2 py-0.5 bg-gray-700 rounded text-xs text-gray-300">
-          {language}
-        </div>
-      )}
-      <SyntaxHighlighter
-        style={oneDark}
-        language={language || 'text'}
-        PreTag="div"
-        className="rounded-lg !mt-0 !mb-0"
-        customStyle={{
-          margin: 0,
-          padding: '1rem',
-          paddingTop: language ? '1.5rem' : '1rem',
-          fontSize: '0.875rem',
-          lineHeight: '1.5',
-        }}
-      >
-        {children}
-      </SyntaxHighlighter>
-    </div>
+    <Suspense
+      fallback={
+        <pre className="my-3 overflow-x-auto rounded-lg bg-gray-900 p-4 text-sm text-gray-100">
+          <code>{children}</code>
+        </pre>
+      }
+    >
+      <AsyncCodeBlockRenderer language={language}>{children}</AsyncCodeBlockRenderer>
+    </Suspense>
   );
 }
 

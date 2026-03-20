@@ -1,7 +1,6 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { lazy, Suspense, useRef, useEffect, useCallback } from 'react';
 import { Bot, User } from 'lucide-react';
 import { Message, ModuleType, ReferencedFile, StepOutput, PlanStep, ToolCallInfo, NodeOutputInfo } from '@/types';
-import MarkdownRenderer from './MarkdownRenderer';
 import ImageDisplay from './ImageDisplay';
 import ConfigPanel from './ConfigPanel';
 import ChatHistoryNavigator from './ChatHistoryNavigator';
@@ -9,6 +8,8 @@ import QuestionCard from './QuestionCard';
 import ExecutorStepOutput from './ExecutorStepOutput';
 import ChatInput from './ChatInput';
 import clsx from 'clsx';
+
+const MarkdownRenderer = lazy(() => import('./MarkdownRenderer'));
 
 type UserMessageDisplay = {
   text: string;
@@ -308,7 +309,17 @@ export default function ChatArea({
                       </div>
                     )}
                     {/* 最终回复内容 */}
-                    {message.content && <MarkdownRenderer content={message.content} />}
+                    {message.content && (
+                      <Suspense
+                        fallback={
+                          <div className="whitespace-pre-wrap break-words leading-relaxed">
+                            {message.content}
+                          </div>
+                        }
+                      >
+                        <MarkdownRenderer content={message.content} />
+                      </Suspense>
+                    )}
                     {message.isAgentWorking && message.content && (
                       <span className="inline-block w-2 h-4 ml-1 bg-rosegold-500 animate-pulse" />
                     )}

@@ -12,6 +12,7 @@ import type {
   SessionDetailResponse,
   AgentListResponse,
   FileTreeNode,
+  RegisterConfigResponse,
 } from './types';
 
 /**
@@ -627,8 +628,8 @@ class AuthApiClient {
   /**
    * 获取注册配置（是否需要邀请码）
    */
-  async getRegisterConfig(): Promise<{ invitation_code_required: boolean }> {
-    return request<{ invitation_code_required: boolean }>(API_ENDPOINTS.authRegisterConfig);
+  async getRegisterConfig(): Promise<RegisterConfigResponse> {
+    return request<RegisterConfigResponse>(API_ENDPOINTS.authRegisterConfig);
   }
 
   /**

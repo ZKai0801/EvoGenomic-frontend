@@ -4,7 +4,6 @@ export { default as ChatInput } from './ChatInput';
 export { default as ChatHistoryNavigator } from './ChatHistoryNavigator';
 export { default as AgentWorkPanel } from './AgentWorkPanel';
 export { default as ProjectView } from './ProjectView';
-export { default as MarkdownRenderer } from './MarkdownRenderer';
 export { default as ConfigPanel } from './ConfigPanel';
 export { default as ImageDisplay } from './ImageDisplay';
 export { default as QuestionCard } from './QuestionCard';

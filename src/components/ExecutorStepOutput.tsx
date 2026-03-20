@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
-import MarkdownRenderer from './MarkdownRenderer';
 import ToolCallItem from './ToolCallItem';
 import type { StepOutput, PlanStep, ToolCallInfo } from '@/types';
+
+const MarkdownRenderer = lazy(() => import('./MarkdownRenderer'));
 
 /** 步骤状态对应的小图标 */
 function StepStatusDot({ status }: { status: StepOutput['status'] }) {
@@ -112,7 +113,15 @@ export default function ExecutorStepOutput({ stepOutputs, planSteps, toolCalls }
                 <div className="pt-2 text-text-primary text-xs leading-relaxed">
                   {output.content ? (
                     <>
-                      <MarkdownRenderer content={output.content} />
+                      <Suspense
+                        fallback={
+                          <div className="whitespace-pre-wrap break-words leading-relaxed">
+                            {output.content}
+                          </div>
+                        }
+                      >
+                        <MarkdownRenderer content={output.content} />
+                      </Suspense>
                       {output.status === 'running' && (
                         <span className="inline-block w-1.5 h-3.5 ml-0.5 bg-rosegold-500 animate-pulse" />
                       )}
