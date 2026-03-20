@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: 'SF Pro Display', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(135deg, #FAFAF7 0%, #F5F3EE 50%, #EEEDEA 100%);
+  color: #1A1815;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar - Elegant Platinum Style */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #C4BFB7 0%, #A8A39E 100%);
+  border-radius: 100px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #C96442 0%, #B55836 100%);
+  background-clip: padding-box;
+}
+
+/* Chat input textarea */
+.chat-input {
+  resize: none;
+  overflow-y: auto;
+  max-height: 200px;
+}
+
+/* Markdown content styling */
+.markdown-content {
+  line-height: 1.7;
+}
+
+.markdown-content p {
+  margin-bottom: 1rem;
+}
+
+.markdown-content code {
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #B55836;
+  border: 1px solid #E5E2DB;
+}
+
+.markdown-content pre {
+  background: linear-gradient(135deg, #F5F3EE 0%, #EEEDEA 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  overflow-x: auto;
+  margin: 1.25rem 0;
+  border: 1px solid #E5E2DB;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+  border: none;
+  color: #1A1815;
+}
+
+/* Animation for typing indicator */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.typing-cursor {
+  animation: blink 1s infinite;
+}
+
+/* Transition for panels */
+.panel-transition {
+  transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+/* Agent work panel animation */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.agent-panel-enter {
+  animation: slideIn 0.3s ease forwards;
+}
+
+/* Algorithm detail panel slide in */
+.animate-slideIn {
+  animation: slideIn 0.3s ease forwards;
+}
+
+/* Loading spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
