@@ -655,24 +655,21 @@ function MainApp() {
             setWorkspaceActiveTab('plan');
           }
 
-          // 将占位消息更新为带提问数据的消息
-          const questionMessage: Message = {
-            id: streamingMessageId,
-            role: 'assistant',
-            content: questionData.plan
-              ? '请在右侧规划面板确认执行计划'
-              : questionData.text,
-            timestamp: new Date(),
-            isAgentWorking: false,
-            questionData: questionData.plan
-              ? undefined
-              : (questionData as QuestionData),
-          };
-          
+          // 将占位消息更新为带提问数据的消息（保留已累积的 nodeOutputs）
           setMessages(prev =>
-            prev.map(m =>
-              m.id === streamingMessageId ? questionMessage : m
-            )
+            prev.map(m => {
+              if (m.id !== streamingMessageId) return m;
+              return {
+                ...m,
+                content: questionData.plan
+                  ? '请在右侧规划面板确认执行计划'
+                  : questionData.text,
+                isAgentWorking: false,
+                questionData: questionData.plan
+                  ? undefined
+                  : (questionData as QuestionData),
+              };
+            })
           );
           
           // 更新 session ID
