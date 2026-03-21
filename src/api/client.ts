@@ -206,7 +206,7 @@ export class AgentApiClient {
                   onChunk(data.content);
                 }
                 // 处理节点状态更新（Think/Planner/Executor 等阶段提示）+ 工具调用事件
-                else if (data.type === 'status' || data.type === 'step_update' || data.type === 'step_chunk' || data.type === 'tool_call' || data.type === 'node_output' || data.type === 'observe') {
+                else if (data.type === 'status' || data.type === 'step_update' || data.type === 'step_chunk' || data.type === 'tool_call' || data.type === 'node_output' || data.type === 'observe' || data.type === 'plan_update') {
                   if (onStatus) {
                     onStatus(data);
                   }
@@ -356,7 +356,7 @@ export class AgentApiClient {
                 if (data.type === 'chunk' && data.content) {
                   fullResponse += data.content;
                   onChunk(data.content);
-                } else if (data.type === 'status' || data.type === 'step_update' || data.type === 'step_chunk' || data.type === 'tool_call' || data.type === 'node_output' || data.type === 'observe') {
+                } else if (data.type === 'status' || data.type === 'step_update' || data.type === 'step_chunk' || data.type === 'tool_call' || data.type === 'node_output' || data.type === 'observe' || data.type === 'plan_update') {
                   if (onStatus) onStatus(data);
                 } else if (data.type === 'final') {
                   const finalResponse = data.response || fullResponse;

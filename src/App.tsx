@@ -584,6 +584,7 @@ function MainApp() {
             setIsWorkspacePanelOpen(true);
             setWorkspaceActiveTab('plan');
           }
+          setIsPlanExecuting(false);
           
           // 统一计算 chatId：优先使用 DB 主键（由后端预创建）
           const chatId = dbSessionIdRef.current
@@ -698,6 +699,10 @@ function MainApp() {
                   : m
               )
             );
+            // Executor 开始时标记为执行中
+            if (data.node === 'executor') {
+              setIsPlanExecuting(true);
+            }
             // Think 节点完成时立即更新侧边栏标题（无需等 final 事件）
             if (data.node === 'think' && data.title) {
               const chatId = dbSessionIdRef.current
@@ -724,17 +729,24 @@ function MainApp() {
                 });
               }
             }
+          } else if (data.type === 'plan_update' && (data as any).plan) {
+            // Planner 完成时立即设置 plan 数据并打开规划面板
+            setPlanData((data as any).plan as PlanData);
+            setIsPlanEditable(false);
+            setIsWorkspacePanelOpen(true);
+            setWorkspaceActiveTab('plan');
           } else if (data.type === 'step_update' && data.step_id != null) {
-            // 更新 PlanPanel 中的步骤状态
+            // 更新 PlanPanel 中的步骤状态和输出
             setPlanData(prev => {
               if (!prev) return prev;
               return {
                 ...prev,
-                plan: prev.plan.map(s =>
-                  s.step_id === data.step_id && data.status
-                    ? { ...s, status: data.status as any }
-                    : s
-                ),
+                plan: prev.plan.map(s => {
+                  if (s.step_id !== data.step_id || !data.status) return s;
+                  const updated: any = { ...s, status: data.status };
+                  if ((data as any).output != null) updated.output = (data as any).output;
+                  return updated;
+                }),
               };
             });
             // 更新 stepOutputs 状态
