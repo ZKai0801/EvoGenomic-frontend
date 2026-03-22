@@ -7,6 +7,7 @@ import {
   Settings,
   HelpCircle,
   LogOut,
+  Crown,
   User,
   PanelLeftClose,
   PanelLeft,
@@ -720,6 +721,15 @@ export default function Sidebar({
                 <HelpCircle size={18} />
                 <span className="text-sm">帮助</span>
               </button>
+              {!isGuest && (
+                <button
+                  onClick={() => { setIsUserMenuOpen(false); navigate('/upgrade'); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-amber-500 hover:bg-amber-50 transition-colors"
+                >
+                  <Crown size={18} />
+                  <span className="text-sm">升级套餐</span>
+                </button>
+              )}
               <div className="h-px bg-platinum-400 my-1" />
               {isGuest ? (
                 <button 

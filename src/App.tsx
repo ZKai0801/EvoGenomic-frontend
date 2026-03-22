@@ -6,6 +6,8 @@ import LoginPromptModal from '@/components/LoginPromptModal';
 import { LoginPage } from '@/components/LoginPage';
 import { RegisterPage } from '@/components/RegisterPage';
 import { ForgotPasswordPage } from '@/components/ForgotPasswordPage';
+import { UpgradePage } from '@/components/UpgradePage';
+import { PaymentPage } from '@/components/PaymentPage';
 import { Message, ModuleType, ChatSession, Project, QuestionData, PlanData, ReferencedFile, StepOutput, ToolCallInfo } from '@/types';
 import { generateId } from '@/data/mockData';
 import { agentApiClient, chatApiClient, authApiClient, AgentType, ChatSessionResponse, ChatMessageResponse, ProjectResponse } from '@/api';
@@ -1409,6 +1411,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/upgrade" element={<AuthGuard><UpgradePage /></AuthGuard>} />
+        <Route path="/payment/:orderNo" element={<AuthGuard><PaymentPage /></AuthGuard>} />
         <Route path="/*" element={
           <AuthGuard>
             <MainApp />

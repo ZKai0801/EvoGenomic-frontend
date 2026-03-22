@@ -1359,6 +1359,45 @@ class ChatApiClient {
       body: JSON.stringify({ type, name, content }),
     });
   }
+
+  // ============== 支付管理 ==============
+
+  /** 创建充值订单 */
+  async createRechargeOrder(data: import('./types').RechargeRequest): Promise<import('./types').PaymentInitResponse> {
+    return this.authRequest(API_ENDPOINTS.paymentRecharge, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /** 创建订阅订单 */
+  async createSubscriptionOrder(data: import('./types').SubscribeRequest): Promise<import('./types').PaymentInitResponse> {
+    return this.authRequest(API_ENDPOINTS.paymentSubscribe, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /** 查询订单状态 */
+  async getOrderStatus(orderNo: string): Promise<import('./types').OrderResponse> {
+    return this.authRequest(API_ENDPOINTS.paymentOrder(orderNo));
+  }
+
+  /** 查询订单历史 */
+  async getOrders(limit: number = 20, offset: number = 0): Promise<import('./types').OrderListResponse> {
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    return this.authRequest(`${API_ENDPOINTS.paymentOrders}?${params}`);
+  }
+
+  /** 查询当前订阅 */
+  async getSubscription(): Promise<import('./types').SubscriptionResponse | null> {
+    return this.authRequest(API_ENDPOINTS.paymentSubscription);
+  }
+
+  /** 查询用户余额 */
+  async getBalance(): Promise<import('./types').UserBalanceResponse> {
+    return this.authRequest(API_ENDPOINTS.paymentBalance);
+  }
 }
 
 // 导出对话 API 单例实例

@@ -89,6 +89,14 @@ export const API_ENDPOINTS = {
   skillUser: '/api/skills/user',
   skillUserDoc: '/api/skills/user/doc',
   skillAdminDoc: '/api/skills/admin/doc',
+
+  // 支付管理
+  paymentRecharge: '/api/payments/recharge',
+  paymentSubscribe: '/api/payments/subscribe',
+  paymentOrder: (orderNo: string) => `/api/payments/order/${orderNo}`,
+  paymentOrders: '/api/payments/orders',
+  paymentSubscription: '/api/payments/subscription',
+  paymentBalance: '/api/payments/balance',
 };
 
 // 请求超时时间（毫秒）

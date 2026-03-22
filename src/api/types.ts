@@ -445,3 +445,64 @@ export interface FileTreeNode {
   size?: number;
   modified?: number;
 }
+
+// ============== 支付相关 ==============
+
+export interface RechargeRequest {
+  amount: number;
+  credit_amount: number;
+  payment_method: 'wechat' | 'alipay';
+}
+
+export interface SubscribeRequest {
+  plan_type: 'pro';
+  payment_method: 'wechat' | 'alipay';
+}
+
+export interface PaymentInitResponse {
+  order_no: string;
+  amount: number;
+  payment_method: string;
+  code_url?: string | null;
+  pay_url?: string | null;
+}
+
+export interface OrderResponse {
+  id: number;
+  order_no: string;
+  user_id: number;
+  order_type: string;
+  plan_type: string;
+  amount: number;
+  credit_amount?: number | null;
+  status: string;  // pending | paid | expired | refunded | cancelled
+  payment_method?: string | null;
+  payment_trade_no?: string | null;
+  paid_at?: string | null;
+  expired_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrderListResponse {
+  orders: OrderResponse[];
+  total: number;
+}
+
+export interface SubscriptionResponse {
+  id: number;
+  user_id: number;
+  plan_type: string;
+  status: string;  // active | expired | cancelled
+  current_period_start: string;
+  current_period_end: string;
+  auto_renew: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserBalanceResponse {
+  user_id: number;
+  credit_balance: number;
+  vip: string;
+}
