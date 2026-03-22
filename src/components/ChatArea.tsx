@@ -233,8 +233,9 @@ export default function ChatArea({
                       const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
                       const isLastAssistant = lastAssistantMsg?.id === message.id;
                       const hasCompletedSteps = planSteps.some(s => s.output && s.status !== 'pending' && s.status !== 'running');
+                      const hasStepOutputData = isLastAssistant && stepOutputs && stepOutputs.size > 0;
                       const showHistorical = !message.isAgentWorking && isLastAssistant && hasCompletedSteps;
-                      const showExecutorSteps = hasLiveOutputs || showHistorical;
+                      const showExecutorSteps = hasLiveOutputs || showHistorical || hasStepOutputData;
 
                       const elements: React.ReactNode[] = [];
 
