@@ -9,6 +9,9 @@ export { default as ImageDisplay } from './ImageDisplay';
 export { default as QuestionCard } from './QuestionCard';
 export { default as WorkspacePanel } from './WorkspacePanel';
 export { default as FileTree } from './FileTree';
+export { default as SkillLibrary } from './SkillLibrary';
+export { default as SkillDocViewer } from './SkillDocViewer';
+export { default as SkillEditor } from './SkillEditor';
 
 // 认证相关组件
 export { LoginPage } from './LoginPage';

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Sidebar, ChatArea, ProjectView, AuthGuard, useAuth, WorkspacePanel } from '@/components';
+import SkillLibrary from '@/components/SkillLibrary';
 import LoginPromptModal from '@/components/LoginPromptModal';
 import { LoginPage } from '@/components/LoginPage';
 import { RegisterPage } from '@/components/RegisterPage';
@@ -47,7 +48,7 @@ const convertApiProject = (p: ProjectResponse): Project => ({
 });
 
 function MainApp() {
-  const { isGuest } = useAuth();
+  const { isGuest, user } = useAuth();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [currentModule, setCurrentModule] = useState<ModuleType>('chat');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -60,6 +61,7 @@ function MainApp() {
   const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(undefined);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isWorkspacePanelOpen, setIsWorkspacePanelOpen] = useState(false);
+  const [showSkillLibrary, setShowSkillLibrary] = useState(false);
   const [workspaceActiveTab, setWorkspaceActiveTab] = useState<'files' | 'plan' | 'env'>('files');
   const [planData, setPlanData] = useState<PlanData | null>(null);
   const [isPlanEditable, setIsPlanEditable] = useState(false);
@@ -221,6 +223,7 @@ function MainApp() {
     setPlanData(null);
     setIsPlanEditable(false);
     setIsPlanExecuting(false);
+    setShowSkillLibrary(false);
     // 清除 sessionStorage 中的活跃聊天记录
     sessionStorage.removeItem('activeChatId');
     sessionStorage.removeItem('activeSessionId');
@@ -228,6 +231,7 @@ function MainApp() {
 
   const handleSelectChat = useCallback(async (chat: ChatSession) => {
     setCurrentChatId(chat.id);
+    setShowSkillLibrary(false);
     // 使用 chat_id (UUID) 恢复 agent 会话（LangGraph thread_id = chat_id）
     setSessionId(chat.chatId || undefined);
     dbSessionIdRef.current = parseInt(chat.id, 10) || null;
@@ -1312,6 +1316,11 @@ function MainApp() {
         onMergeProject={handleMergeProject}
         onMoveToProject={handleMoveToProject}
         onRenameChat={handleRenameChat}
+        onOpenSkillLibrary={() => {
+          setShowSkillLibrary(true);
+          setCurrentChatId(undefined);
+          setCurrentProjectId(undefined);
+        }}
         currentChatId={currentChatId}
         currentProjectId={currentProjectId}
         isCollapsed={isSidebarCollapsed}
@@ -1321,7 +1330,12 @@ function MainApp() {
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Conditional content based on module and project view */}
-        {currentProject && !currentChatId ? (
+        {showSkillLibrary ? (
+          <SkillLibrary
+            isAdmin={user?.role === 'admin'}
+            isGuest={isGuest}
+          />
+        ) : currentProject && !currentChatId ? (
           // 项目视图
           <ProjectView
             project={currentProject}

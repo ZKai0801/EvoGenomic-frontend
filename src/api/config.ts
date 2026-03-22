@@ -81,6 +81,14 @@ export const API_ENDPOINTS = {
   authChangePassword: '/api/auth/change-password',
   authSendResetCode: '/api/auth/send-reset-code',
   authResetPassword: '/api/auth/reset-password',
+
+  // 技能库
+  skillDomains: '/api/skills/domains',
+  skillModules: '/api/skills/modules',
+  skillDoc: '/api/skills/doc',
+  skillUser: '/api/skills/user',
+  skillUserDoc: '/api/skills/user/doc',
+  skillAdminDoc: '/api/skills/admin/doc',
 };
 
 // 请求超时时间（毫秒）

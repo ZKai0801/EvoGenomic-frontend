@@ -13,6 +13,8 @@ import type {
   AgentListResponse,
   FileTreeNode,
   RegisterConfigResponse,
+  SkillInfo,
+  SkillDocResponse,
 } from './types';
 
 /**
@@ -1250,6 +1252,57 @@ class ChatApiClient {
       total_size: result.total_size,
       conversation_id: result.conversation_id,
     };
+  }
+
+  // ============== 技能库 ==============
+
+  /** 列出全部内置 domain 流程 */
+  async listSkillDomains(): Promise<SkillInfo[]> {
+    return this.authRequest<SkillInfo[]>(API_ENDPOINTS.skillDomains);
+  }
+
+  /** 列出全部内置 module 模块 */
+  async listSkillModules(): Promise<SkillInfo[]> {
+    return this.authRequest<SkillInfo[]>(API_ENDPOINTS.skillModules);
+  }
+
+  /** 读取内置文档（domain 或 module）的 Markdown 内容 */
+  async getSkillDoc(type: 'domain' | 'module', name: string): Promise<SkillDocResponse> {
+    const params = new URLSearchParams({ type, name });
+    return this.authRequest<SkillDocResponse>(`${API_ENDPOINTS.skillDoc}?${params}`);
+  }
+
+  /** 列出用户自定义技能 */
+  async listUserSkills(): Promise<SkillInfo[]> {
+    return this.authRequest<SkillInfo[]>(API_ENDPOINTS.skillUser);
+  }
+
+  /** 读取用户自定义技能内容 */
+  async getUserSkillDoc(name: string): Promise<SkillDocResponse> {
+    const params = new URLSearchParams({ name });
+    return this.authRequest<SkillDocResponse>(`${API_ENDPOINTS.skillUserDoc}?${params}`);
+  }
+
+  /** 创建或更新用户自定义技能 */
+  async saveUserSkill(name: string, content: string): Promise<{ message: string; name: string }> {
+    return this.authRequest(`${API_ENDPOINTS.skillUser}`, {
+      method: 'POST',
+      body: JSON.stringify({ name, content }),
+    });
+  }
+
+  /** 删除用户自定义技能 */
+  async deleteUserSkill(name: string): Promise<{ message: string }> {
+    const params = new URLSearchParams({ name });
+    return this.authRequest(`${API_ENDPOINTS.skillUser}?${params}`, { method: 'DELETE' });
+  }
+
+  /** 管理员: 编辑内置文档 */
+  async updateAdminDoc(type: 'domain' | 'module', name: string, content: string): Promise<{ message: string }> {
+    return this.authRequest(`${API_ENDPOINTS.skillAdminDoc}`, {
+      method: 'PUT',
+      body: JSON.stringify({ type, name, content }),
+    });
   }
 }
 

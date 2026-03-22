@@ -14,7 +14,8 @@ import {
   FolderPlus,
   MoreVertical,
   Edit3,
-  FolderInput
+  FolderInput,
+  BookOpen
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -37,6 +38,7 @@ interface SidebarProps {
   onMergeProject?: (sourceProjectId: string, targetProjectId: string) => void;
   onMoveToProject?: (chatId: string, projectId: string | undefined) => void;
   onRenameChat?: (chatId: string, newTitle: string) => void;
+  onOpenSkillLibrary?: () => void;
   currentChatId?: string;
   currentProjectId?: string;
   isCollapsed: boolean;
@@ -62,6 +64,7 @@ export default function Sidebar({
   onMergeProject,
   onMoveToProject,
   onRenameChat,
+  onOpenSkillLibrary,
   currentChatId,
   currentProjectId,
   isCollapsed,
@@ -384,6 +387,15 @@ export default function Sidebar({
             </button>
           );
         })}
+        {/* 技能库入口 */}
+        <button
+          onClick={() => onOpenSkillLibrary?.()}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-text-secondary hover:bg-sidebar-hover hover:text-text-primary"
+          title={isCollapsed ? '技能库' : undefined}
+        >
+          <BookOpen size={20} className="text-emerald-500" />
+          {!isCollapsed && <span className="text-sm font-medium">技能库</span>}
+        </button>
       </div>
 
       <div className="h-px bg-sidebar-active mx-3 my-2" />
@@ -656,6 +668,13 @@ export default function Sidebar({
             title="聊天记录"
           >
             <MessageCircle size={20} />
+          </button>
+          <button
+            onClick={() => onOpenSkillLibrary?.()}
+            className="p-2 text-text-secondary hover:bg-sidebar-hover hover:text-text-primary rounded-lg transition-colors"
+            title="技能库"
+          >
+            <BookOpen size={20} />
           </button>
         </div>
       )}

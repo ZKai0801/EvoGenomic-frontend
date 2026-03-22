@@ -422,6 +422,20 @@ export interface ProjectListResponse {
   total: number;
 }
 
+// ============== 技能库相关 ==============
+
+export interface SkillInfo {
+  name: string;
+  description: string;
+  type: 'domain' | 'module' | 'user';
+}
+
+export interface SkillDocResponse {
+  name: string;
+  type: string;
+  content: string;
+}
+
 // ============== 文件浏览相关 ==============
 
 export interface FileTreeNode {
