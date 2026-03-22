@@ -1083,6 +1083,61 @@ class ChatApiClient {
   }
 
   /**
+   * 获取文件内容（文本预览用）
+   * 返回文本内容，最大 2MB；超出抛异常
+   */
+  async fetchFileContent(path: string): Promise<{ content: string; size: number }> {
+    const token = authApiClient.getAccessToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const params = new URLSearchParams({ path });
+    const resp = await fetch(`${API_BASE_URL}${API_ENDPOINTS.fileDownload}?${params}`, { headers });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || '获取文件内容失败');
+    }
+
+    const contentLength = resp.headers.get('Content-Length');
+    const MAX_PREVIEW_SIZE = 2 * 1024 * 1024; // 2MB
+    if (contentLength && parseInt(contentLength, 10) > MAX_PREVIEW_SIZE) {
+      throw new Error(`文件过大（${(parseInt(contentLength, 10) / 1024 / 1024).toFixed(1)} MB），超过预览限制（2 MB）`);
+    }
+
+    const blob = await resp.blob();
+    if (blob.size > MAX_PREVIEW_SIZE) {
+      throw new Error(`文件过大（${(blob.size / 1024 / 1024).toFixed(1)} MB），超过预览限制（2 MB）`);
+    }
+
+    const content = await blob.text();
+    return { content, size: blob.size };
+  }
+
+  /**
+   * 获取文件 Blob（图片预览用）
+   */
+  async fetchFileBlob(path: string): Promise<Blob> {
+    const token = authApiClient.getAccessToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const params = new URLSearchParams({ path });
+    const resp = await fetch(`${API_BASE_URL}${API_ENDPOINTS.fileDownload}?${params}`, { headers });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || '获取文件失败');
+    }
+
+    const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
+    const contentLength = resp.headers.get('Content-Length');
+    if (contentLength && parseInt(contentLength, 10) > MAX_IMAGE_SIZE) {
+      throw new Error(`图片过大（${(parseInt(contentLength, 10) / 1024 / 1024).toFixed(1)} MB），超过预览限制（20 MB）`);
+    }
+
+    return resp.blob();
+  }
+
+  /**
    * 下载文件（触发浏览器下载）
    */
   async downloadFile(path: string): Promise<void> {

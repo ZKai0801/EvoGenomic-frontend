@@ -21,6 +21,7 @@ interface FileTreeNodeProps {
   onDelete?: (path: string, name: string) => void;
   onMove?: (srcPath: string, destDir: string) => void;
   onSelect?: (path: string, name: string) => void;
+  onPreview?: (path: string, name: string) => void;
 }
 
 /** 格式化文件大小 */
@@ -51,7 +52,7 @@ function getFileIcon(name: string): string {
 }
 
 
-function FileTreeNode({ node, level, fetchChildren, autoExpandPath, refreshToken, onDownload, onDelete, onMove, onSelect }: FileTreeNodeProps) {
+function FileTreeNode({ node, level, fetchChildren, autoExpandPath, refreshToken, onDownload, onDelete, onMove, onSelect, onPreview }: FileTreeNodeProps) {
   const [expanded, setExpanded] = useState(node.type === 'dir');
   const [children, setChildren] = useState<FileTreeNodeData[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -96,10 +97,10 @@ function FileTreeNode({ node, level, fetchChildren, autoExpandPath, refreshToken
   const toggleExpand = useCallback(() => {
     if (node.type === 'dir') {
       setExpanded(prev => !prev);
-    } else if (onSelect) {
-      onSelect(node.path, node.name);
+    } else if (onPreview) {
+      onPreview(node.path, node.name);
     }
-  }, [node.type, node.path, node.name, onSelect]);
+  }, [node.type, node.path, node.name, onPreview]);
 
   // ---- Drag & Drop ----
   const handleDragStart = useCallback((e: React.DragEvent) => {
@@ -244,6 +245,7 @@ function FileTreeNode({ node, level, fetchChildren, autoExpandPath, refreshToken
               onDelete={onDelete}
               onMove={onMove}
               onSelect={onSelect}
+              onPreview={onPreview}
             />
           ))}
         </div>
@@ -261,9 +263,10 @@ interface FileTreeProps {
   onDelete?: (path: string, name: string) => void;
   onMove?: (srcPath: string, destDir: string) => void;
   onSelect?: (path: string, name: string) => void;
+  onPreview?: (path: string, name: string) => void;
 }
 
-export default function FileTree({ fetchChildren, autoExpandPath, refreshToken, onDownload, onDelete, onMove, onSelect }: FileTreeProps) {
+export default function FileTree({ fetchChildren, autoExpandPath, refreshToken, onDownload, onDelete, onMove, onSelect, onPreview }: FileTreeProps) {
   const [rootNodes, setRootNodes] = useState<FileTreeNodeData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -332,6 +335,7 @@ export default function FileTree({ fetchChildren, autoExpandPath, refreshToken, 
           onDelete={onDelete}
           onMove={onMove}
           onSelect={onSelect}
+          onPreview={onPreview}
         />
       ))}
     </div>

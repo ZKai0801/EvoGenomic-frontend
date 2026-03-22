@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { StopCircle } from 'lucide-react';
 import FileTree from './FileTree';
 import PlanPanel from './PlanPanel';
+import FilePreviewModal from './FilePreviewModal';
 import type { FileTreeNodeData } from './FileTree';
 import type { PlanData } from '@/types';
 import { chatApiClient } from '@/api';
@@ -64,6 +65,7 @@ export default function WorkspacePanel({
   const [panelWidth, setPanelWidth] = useState(288);
   const [isResizing, setIsResizing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [previewFile, setPreviewFile] = useState<{ path: string; name: string } | null>(null);
   const resizeStartXRef = useRef(0);
   const resizeStartWidthRef = useRef(288);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -183,6 +185,11 @@ export default function WorkspacePanel({
       if (uploadInputRef.current) uploadInputRef.current.value = '';
     }
   }, [currentProjectId, dbConversationId, sessionId, onFileSelect]);
+
+  // 文件预览
+  const handlePreview = useCallback((path: string, name: string) => {
+    setPreviewFile({ path, name });
+  }, []);
 
   const handleResizeStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -345,6 +352,7 @@ export default function WorkspacePanel({
                     onDelete={handleDelete}
                     onMove={handleMove}
                     onSelect={onFileSelect}
+                    onPreview={handlePreview}
                   />
                 </div>
               </div>
@@ -391,6 +399,17 @@ export default function WorkspacePanel({
             )}
           </div>
         </div>
+      )}
+
+      {/* 文件预览弹窗 */}
+      {previewFile && (
+        <FilePreviewModal
+          isOpen={true}
+          filePath={previewFile.path}
+          fileName={previewFile.name}
+          onClose={() => setPreviewFile(null)}
+          onDownload={handleDownload}
+        />
       )}
     </>
   );
