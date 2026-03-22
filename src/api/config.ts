@@ -36,6 +36,7 @@ export const API_ENDPOINTS = {
   agentSessions: '/api/agent/sessions',
   agentSessionDetail: (sessionId: string) => `/api/agent/sessions/${sessionId}`,
   agentSessionReset: (sessionId: string) => `/api/agent/sessions/${sessionId}/reset`,
+  agentSessionStatus: (sessionId: string) => `/api/agent/session/${sessionId}/status`,
   agentList: '/api/agent/agents',
   
   // 对话持久化相关（新 API）
@@ -46,6 +47,7 @@ export const API_ENDPOINTS = {
   conversationStats: '/api/conversations/stats/overview',
   conversationPlan: (id: number) => `/api/conversations/${id}/plan`,
   conversationNodeOutputs: (id: number) => `/api/conversations/${id}/node-outputs`,
+  conversationToolLogs: (id: number) => `/api/conversations/${id}/tool-logs`,
   
   // 项目管理
   projects: '/api/projects',

@@ -443,6 +443,19 @@ export class AgentApiClient {
     });
   }
 
+  /**
+   * 获取会话的后台执行状态（idle / running / waiting_for_input / completed / error / cancelled）
+   */
+  async getSessionStatus(sessionId: string): Promise<{ execution_status: string; pending_question?: any }> {
+    const token = authApiClient.getAccessToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return request<{ execution_status: string; pending_question?: any }>(
+      API_ENDPOINTS.agentSessionStatus(sessionId),
+      { headers }
+    );
+  }
+
   // ============== Agent 信息 ==============
 
   /**
@@ -897,21 +910,46 @@ class ChatApiClient {
   // ============== 执行计划 ==============
 
   /**
-   * 获取对话最新执行计划
+   * 获取对话最新执行计划（可携带 agent session_id 以获取执行状态）
    */
-  async getLatestPlan(sessionId: number): Promise<{ plan: any | null }> {
-    return this.authRequest<{ plan: any | null }>(
-      API_ENDPOINTS.conversationPlan(sessionId)
-    );
+  async getLatestPlan(chatPk: number, agentSessionId?: string): Promise<{ plan: any | null; execution_status?: string }> {
+    let url = API_ENDPOINTS.conversationPlan(chatPk);
+    if (agentSessionId) {
+      url += `?session_id=${encodeURIComponent(agentSessionId)}`;
+    }
+    return this.authRequest<{ plan: any | null; execution_status?: string }>(url);
   }
 
   /**
    * 获取对话的各节点输出摘要（历史加载）
    */
-  async getNodeOutputs(sessionId: number): Promise<{ node_outputs: Array<{ node: string; content: string }> }> {
-    return this.authRequest<{ node_outputs: Array<{ node: string; content: string }> }>(
+  async getNodeOutputs(sessionId: number): Promise<{
+    node_outputs: Array<{ node: string; content: string }>;
+    node_outputs_by_msg?: Record<string, Array<{ node: string; content: string }>>;
+  }> {
+    return this.authRequest<{
+      node_outputs: Array<{ node: string; content: string }>;
+      node_outputs_by_msg?: Record<string, Array<{ node: string; content: string }>>;
+    }>(
       API_ENDPOINTS.conversationNodeOutputs(sessionId)
     );
+  }
+
+  /**
+   * 获取对话的 Executor 工具调用日志（按 step_id 分组）
+   */
+  async getToolLogs(chatPk: number): Promise<{
+    tool_logs: Record<string, Array<{
+      id: string;
+      tool: string;
+      arguments: Record<string, any>;
+      success: boolean;
+      output: string;
+      error?: string;
+      duration_ms?: number;
+    }>>;
+  }> {
+    return this.authRequest(API_ENDPOINTS.conversationToolLogs(chatPk));
   }
 
   // ============== 统计信息 ==============

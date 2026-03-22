@@ -243,7 +243,7 @@ function MainApp() {
         const loadedMessages = messagesData.map(convertApiMessage);
         setMessages(loadedMessages);
       } catch (error) {
-        console.error('加载会话消息失败:', error);
+        console.warn('加载会话消息失败:', error);
         // 回退到本地缓存的消息
         setMessages(chat.messages || []);
       }
@@ -251,49 +251,188 @@ function MainApp() {
       setMessages(chat.messages || []);
     }
     
-    // 恢复执行计划（从 plan_snapshots 表加载最新快照，回退到 planner 输出）
+    // 恢复执行计划（携带 agent session_id 以获取后台执行状态）
+    const agentSid = chat.chatId || undefined;  // chat_id UUID = agent session_id
     if (authApiClient.isAuthenticated() && dbSessionIdRef.current) {
       try {
-        const { plan } = await chatApiClient.getLatestPlan(dbSessionIdRef.current);
+        const { plan, execution_status } = await chatApiClient.getLatestPlan(dbSessionIdRef.current, agentSid);
         if (plan && plan.plan) {
           setPlanData(plan as PlanData);
           setIsPlanEditable(false);
-          // 检测是否有步骤正在执行中（running 状态）
-          const hasRunning = (plan.plan as any[]).some(
-            (s: any) => s.status === 'running'
-          );
-          setIsPlanExecuting(hasRunning);
-          if (hasRunning) {
+
+          if (execution_status === 'running' && agentSid) {
+            // 后台仍在执行 → 重连 SSE 继续接收实时事件
+            setIsPlanExecuting(true);
             setIsWorkspacePanelOpen(true);
             setWorkspaceActiveTab('plan');
+            // 通过发送空消息 + 已有 session_id 触发 SSE 重连（后端检测到 running 状态只订阅不启动）
+            agentApiClient.chatStream(
+              '',          // 重连用空消息
+              agentSid,
+              'model' as AgentType,
+              (chunk) => {
+                // 接收后续增量内容
+                setMessages(prev => {
+                  const lastIdx = prev.length - 1;
+                  if (lastIdx < 0 || prev[lastIdx].role !== 'assistant') return prev;
+                  return prev.map((m, i) =>
+                    i === lastIdx ? { ...m, content: m.content + chunk } : m
+                  );
+                });
+              },
+              (_response, _sid, title, planResult) => {
+                setIsPlanExecuting(false);
+                if (planResult) setPlanData(planResult as PlanData);
+                if (title) {
+                  setChatHistory(prev =>
+                    prev.map(c => c.id === chat.id ? { ...c, title } : c)
+                  );
+                }
+              },
+              (error) => {
+                console.error('重连 SSE 出错:', error);
+                setIsPlanExecuting(false);
+              },
+              (qData) => {
+                if (qData.plan) {
+                  setPlanData(qData.plan as PlanData);
+                  setIsPlanEditable(true);
+                  setIsWorkspacePanelOpen(true);
+                  setWorkspaceActiveTab('plan');
+                }
+                setIsPlanExecuting(false);
+              },
+              (statusData) => {
+                // 转发 step_update / step_chunk / 其他状态事件到现有处理逻辑
+                if (statusData.type === 'step_update' && statusData.step_id != null) {
+                  setPlanData(prev => {
+                    if (!prev || !prev.plan) return prev;
+                    return {
+                      ...prev,
+                      plan: prev.plan.map((s: any) =>
+                        s.step_id === statusData.step_id
+                          ? { ...s, status: statusData.status || s.status }
+                          : s
+                      ),
+                    };
+                  });
+                }
+              },
+              undefined,   // onSession — 不需要
+              undefined,   // projectId — 已有
+            );
+          } else if (execution_status === 'waiting_for_input' && agentSid) {
+            // 等待用户输入 → 从 pending_question 恢复 QuestionCard
+            setIsPlanExecuting(false);
+            try {
+              const statusResp = await agentApiClient.getSessionStatus(agentSid);
+              if (statusResp.pending_question) {
+                const qd = statusResp.pending_question;
+                if (qd.plan) {
+                  setPlanData(qd.plan as PlanData);
+                  setIsPlanEditable(true);
+                  setIsWorkspacePanelOpen(true);
+                  setWorkspaceActiveTab('plan');
+                }
+              }
+            } catch {
+              // status 查询失败不影响正常使用
+            }
+          } else {
+            // 已完成/出错/无活跃执行 → 静态展示（后端已清理 stale running）
+            setIsPlanExecuting(false);
           }
         } else {
           setPlanData(null);
         }
-      } catch {
+      } catch (err) {
+        console.warn('加载执行计划失败:', err);
         setPlanData(null);
       }
     } else {
       setPlanData(null);
     }
 
-    // 恢复各节点输出摘要（历史展示）
+    // 恢复各节点输出摘要（按 msg_id 分组附加到对应的 assistant 消息）
     if (authApiClient.isAuthenticated() && dbSessionIdRef.current) {
       try {
-        const { node_outputs } = await chatApiClient.getNodeOutputs(dbSessionIdRef.current);
-        if (node_outputs && node_outputs.length > 0) {
-          // 将 node outputs 附加到最后一条 assistant 消息
+        const resp = await chatApiClient.getNodeOutputs(dbSessionIdRef.current);
+        const byMsg = resp.node_outputs_by_msg;
+        const flatOutputs = resp.node_outputs;
+        if (byMsg && Object.keys(byMsg).length > 0) {
+          setMessages(prev => {
+            // 建立 msg_id → 下一条 assistant 消息 index 的映射
+            const msgIdToNextAssistant = new Map<string, number>();
+            for (let i = 0; i < prev.length; i++) {
+              if (prev[i].role === 'user' && prev[i].id) {
+                // 找到此 user msg 之后的第一条 assistant msg
+                for (let j = i + 1; j < prev.length; j++) {
+                  if (prev[j].role === 'assistant') {
+                    msgIdToNextAssistant.set(prev[i].id!, j);
+                    break;
+                  }
+                }
+              }
+            }
+            // 按 assistant 消息 index 收集 node outputs
+            const indexToOutputs = new Map<number, Array<{ node: string; content: string }>>();
+            for (const [msgId, outputs] of Object.entries(byMsg)) {
+              const idx = msgIdToNextAssistant.get(msgId);
+              if (idx !== undefined) {
+                indexToOutputs.set(idx, [...(indexToOutputs.get(idx) || []), ...outputs]);
+              }
+            }
+            // 兜底：如果没有任何 msg_id 匹配上，使用 flat 列表附加到最后一条 assistant
+            if (indexToOutputs.size === 0 && flatOutputs && flatOutputs.length > 0) {
+              const lastIdx = [...prev].reverse().findIndex(m => m.role === 'assistant');
+              if (lastIdx !== -1) {
+                indexToOutputs.set(prev.length - 1 - lastIdx, flatOutputs);
+              }
+            }
+            if (indexToOutputs.size === 0) return prev;
+            return prev.map((m, i) => {
+              const outputs = indexToOutputs.get(i);
+              return outputs ? { ...m, nodeOutputs: outputs } : m;
+            });
+          });
+        } else if (flatOutputs && flatOutputs.length > 0) {
+          // 兼容旧格式：附加到最后一条 assistant 消息
           setMessages(prev => {
             const lastAssistantIdx = [...prev].reverse().findIndex(m => m.role === 'assistant');
             if (lastAssistantIdx === -1) return prev;
             const realIdx = prev.length - 1 - lastAssistantIdx;
             return prev.map((m, i) =>
-              i === realIdx ? { ...m, nodeOutputs: node_outputs } : m
+              i === realIdx ? { ...m, nodeOutputs: flatOutputs } : m
             );
           });
         }
       } catch {
         // node outputs 加载失败不影响正常使用
+      }
+    }
+
+    // 恢复 Executor 工具调用历史（按 step_id 分组）
+    if (authApiClient.isAuthenticated() && dbSessionIdRef.current) {
+      try {
+        const { tool_logs } = await chatApiClient.getToolLogs(dbSessionIdRef.current);
+        if (tool_logs && Object.keys(tool_logs).length > 0) {
+          const toolCallMap = new Map<number, ToolCallInfo[]>();
+          for (const [stepId, calls] of Object.entries(tool_logs)) {
+            const mapped: ToolCallInfo[] = calls.map((tc: any) => ({
+              id: tc.id,
+              tool: tc.tool,
+              arguments: tc.arguments || {},
+              status: tc.success ? 'complete' as const : 'error' as const,
+              output: tc.output,
+              error: tc.error,
+              duration_ms: tc.duration_ms,
+            }));
+            toolCallMap.set(Number(stepId), mapped);
+          }
+          setToolCalls(toolCallMap);
+        }
+      } catch {
+        // tool logs 加载失败不影响正常使用
       }
     }
 
