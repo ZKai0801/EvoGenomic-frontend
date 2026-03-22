@@ -764,23 +764,24 @@ function MainApp() {
           
           setIsLoading(false);
         },
-        // onError: 错误回调
+        // onError: 错误回调 — 保留已累积的中间内容，追加错误信息
         (error: string) => {
           cancelStreamRef.current = null;
           console.error('流式响应错误:', error);
-          
-          const errorMessage: Message = {
-            id: streamingMessageId,
-            role: 'assistant',
-            content: `抱歉，处理您的请求时出错：${error}\n\n请重试或提供更多信息。`,
-            timestamp: new Date(),
-            isAgentWorking: false,
-          };
+          setIsPlanExecuting(false);
           
           setMessages(prev => 
-            prev.map(m => 
-              m.id === streamingMessageId ? errorMessage : m
-            )
+            prev.map(m => {
+              if (m.id !== streamingMessageId) return m;
+              // 保留流式阶段已累积的内容和 nodeOutputs，追加错误提示
+              const existingContent = m.content || '';
+              const errorSuffix = `\n\n---\n**执行出错**：${error}`;
+              return {
+                ...m,
+                content: existingContent ? existingContent + errorSuffix : `抱歉，处理您的请求时出错：${error}`,
+                isAgentWorking: false,
+              };
+            })
           );
           
           setIsLoading(false);
