@@ -8,7 +8,7 @@ import { RegisterPage } from '@/components/RegisterPage';
 import { ForgotPasswordPage } from '@/components/ForgotPasswordPage';
 import { UpgradePage } from '@/components/UpgradePage';
 import { PaymentPage } from '@/components/PaymentPage';
-import { Message, ModuleType, ChatSession, Project, QuestionData, PlanData, ReferencedFile, StepOutput, ToolCallInfo } from '@/types';
+import { Message, ModuleType, ChatSession, Project, QuestionData, PlanData, ReferencedFile, StepOutput, ToolCallInfo, normalizePlanData } from '@/types';
 import { generateId } from '@/data/mockData';
 import { agentApiClient, chatApiClient, authApiClient, AgentType, ChatSessionResponse, ChatMessageResponse, ProjectResponse } from '@/api';
 
@@ -262,8 +262,9 @@ function MainApp() {
     if (authApiClient.isAuthenticated() && dbSessionIdRef.current) {
       try {
         const { plan, execution_status } = await chatApiClient.getLatestPlan(dbSessionIdRef.current, agentSid);
-        if (plan && plan.plan) {
-          setPlanData(plan as PlanData);
+        const normalized = normalizePlanData(plan);
+        if (normalized) {
+          setPlanData(normalized);
           setIsPlanEditable(false);
 
           if (execution_status === 'running' && agentSid) {
@@ -288,7 +289,7 @@ function MainApp() {
               },
               (_response, _sid, title, planResult) => {
                 setIsPlanExecuting(false);
-                if (planResult) setPlanData(planResult as PlanData);
+                if (planResult) setPlanData(normalizePlanData(planResult) || planResult as PlanData);
                 if (title) {
                   setChatHistory(prev =>
                     prev.map(c => c.id === chat.id ? { ...c, title } : c)
@@ -301,7 +302,7 @@ function MainApp() {
               },
               (qData) => {
                 if (qData.plan) {
-                  setPlanData(qData.plan as PlanData);
+                  setPlanData(normalizePlanData(qData.plan) || qData.plan as PlanData);
                   setIsPlanEditable(true);
                   setIsWorkspacePanelOpen(true);
                   setWorkspaceActiveTab('plan');
@@ -312,10 +313,10 @@ function MainApp() {
                 // 转发 step_update / step_chunk / 其他状态事件到现有处理逻辑
                 if (statusData.type === 'step_update' && statusData.step_id != null) {
                   setPlanData(prev => {
-                    if (!prev || !prev.plan) return prev;
+                    if (!prev || !prev.steps) return prev;
                     return {
                       ...prev,
-                      plan: prev.plan.map((s: any) =>
+                      steps: prev.steps.map((s: any) =>
                         s.step_id === statusData.step_id
                           ? { ...s, status: statusData.status || s.status }
                           : s
@@ -335,7 +336,7 @@ function MainApp() {
               if (statusResp.pending_question) {
                 const qd = statusResp.pending_question;
                 if (qd.plan) {
-                  setPlanData(qd.plan as PlanData);
+                  setPlanData(normalizePlanData(qd.plan) || qd.plan as PlanData);
                   setIsPlanEditable(true);
                   setIsWorkspacePanelOpen(true);
                   setWorkspaceActiveTab('plan');
@@ -724,7 +725,7 @@ function MainApp() {
 
           // 更新 plan 状态（执行完成后的最终状态）
           if (plan) {
-            setPlanData(plan as PlanData);
+            setPlanData(normalizePlanData(plan) || plan as PlanData);
             setIsPlanEditable(false);
             setIsWorkspacePanelOpen(true);
             setWorkspaceActiveTab('plan');
@@ -796,7 +797,7 @@ function MainApp() {
         (questionData: { text: string; options: string[]; allow_freeform?: boolean; context?: string; plan?: any }) => {
           // 检测是否携带 plan 数据
           if (questionData.plan) {
-            setPlanData(questionData.plan as PlanData);
+            setPlanData(normalizePlanData(questionData.plan) || questionData.plan as PlanData);
             setIsPlanEditable(true);
             setIsWorkspacePanelOpen(true);
             setWorkspaceActiveTab('plan');
@@ -877,7 +878,7 @@ function MainApp() {
             }
           } else if (data.type === 'plan_update' && (data as any).plan) {
             // Planner 完成时立即设置 plan 数据并打开规划面板
-            setPlanData((data as any).plan as PlanData);
+            setPlanData(normalizePlanData((data as any).plan) || (data as any).plan as PlanData);
             setIsPlanEditable(false);
             setIsWorkspacePanelOpen(true);
             setWorkspaceActiveTab('plan');
@@ -887,7 +888,7 @@ function MainApp() {
               if (!prev) return prev;
               return {
                 ...prev,
-                plan: prev.plan.map(s => {
+                steps: prev.steps.map(s => {
                   if (s.step_id !== data.step_id || !data.status) return s;
                   const updated: any = { ...s, status: data.status };
                   if ((data as any).output != null) updated.output = (data as any).output;
@@ -1090,7 +1091,7 @@ function MainApp() {
       if (!prev) return prev;
       return {
         ...prev,
-        plan: prev.plan.map(s =>
+        steps: prev.steps.map(s =>
           s.status === 'running' || s.status === 'pending'
             ? { ...s, status: 'cancelled' as any }
             : s
@@ -1118,7 +1119,7 @@ function MainApp() {
       if (!prev) return prev;
       return {
         ...prev,
-        plan: prev.plan.map(s =>
+        steps: prev.steps.map(s =>
           s.status === 'running' || s.status === 'pending'
             ? { ...s, status: 'cancelled' as any }
             : s
@@ -1141,7 +1142,7 @@ function MainApp() {
       const resetIds = stepIds ? new Set(stepIds) : null;
       return {
         ...prev,
-        plan: prev.plan.map(s => {
+        steps: prev.steps.map(s => {
           // stepIds 为空表示执行所有 pending 步骤，不做额外重置
           if (resetIds && resetIds.has(s.step_id)) {
             return { ...s, status: 'pending' as const, output: null };
@@ -1160,7 +1161,7 @@ function MainApp() {
       (_response: string, _sid: string, _title?: string, plan?: any) => {
         cancelStreamRef.current = null;
         if (plan) {
-          setPlanData(plan as PlanData);
+          setPlanData(normalizePlanData(plan) || plan as PlanData);
         }
         setIsPlanExecuting(false);
       },
@@ -1178,7 +1179,7 @@ function MainApp() {
             if (!prev) return prev;
             return {
               ...prev,
-              plan: prev.plan.map(s =>
+              steps: prev.steps.map(s =>
                 s.step_id === data.step_id && data.status
                   ? { ...s, status: data.status as any }
                   : s
@@ -1372,7 +1373,7 @@ function MainApp() {
             onRemoveReferencedFile={handleRemoveReferencedFile}
             onClearReferencedFiles={handleClearReferencedFiles}
             stepOutputs={stepOutputs}
-            planSteps={planData?.plan ?? []}
+            planSteps={planData?.steps ?? []}
             toolCalls={toolCalls}
           />
         )}

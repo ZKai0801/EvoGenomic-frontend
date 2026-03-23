@@ -37,13 +37,26 @@ export interface PlanStep {
   depend_on: number | null;
   expected_output: string;
   reference: string[] | null;
+  required_params: Record<string, string> | null;
+  optional_params: Record<string, string> | null;
   status: 'pending' | 'running' | 'complete' | 'error' | 'skipped' | 'cancelled';
   output: string | null;
 }
 
 export interface PlanData {
   goal: string;
-  plan: PlanStep[];
+  choices?: Record<string, string>;
+  steps: PlanStep[];
+  /** @deprecated backward compat — use `steps` */
+  plan?: PlanStep[];
+}
+
+/** Normalize plan data from backend (handles both `steps` and legacy `plan` key) */
+export function normalizePlanData(raw: any): PlanData | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const steps = raw.steps || raw.plan;
+  if (!Array.isArray(steps)) return null;
+  return { ...raw, steps, plan: undefined };
 }
 
 // Executor 步骤实时输出

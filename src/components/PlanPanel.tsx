@@ -43,12 +43,12 @@ function StatusIcon({ status }: { status: PlanStep['status'] }) {
 }
 
 export default function PlanPanel({ planData, isEditable, isExecuting = false, onConfirm, onExit, onExecute }: PlanPanelProps) {
-  const [steps, setSteps] = useState<PlanStep[]>(() => planData.plan.map(s => ({ ...s })));
+  const [steps, setSteps] = useState<PlanStep[]>(() => planData.steps.map(s => ({ ...s })));
   const [goal, setGoal] = useState(planData.goal);
 
   // 当 planData 变化时（例如切换聊天），同步本地状态
   useEffect(() => {
-    setSteps(planData.plan.map(s => ({ ...s })));
+    setSteps(planData.steps.map(s => ({ ...s })));
     setGoal(planData.goal);
   }, [planData]);
 
@@ -84,6 +84,8 @@ export default function PlanPanel({ planData, isEditable, isExecuting = false, o
         depend_on: null,
         expected_output: '',
         reference: null,
+        required_params: null,
+        optional_params: null,
         status: 'pending',
         output: null,
       },
@@ -97,7 +99,7 @@ export default function PlanPanel({ planData, isEditable, isExecuting = false, o
   const handleConfirm = useCallback(() => {
     // 用编辑后的步骤构建完整 plan，保留原始 reference/expected_output/output
     const mergedSteps = steps.map((editedStep, i) => {
-      const original = planData.plan[i];
+      const original = planData.steps[i];
       return {
         ...editedStep,
         expected_output: editedStep.expected_output || original?.expected_output || '',
@@ -105,7 +107,7 @@ export default function PlanPanel({ planData, isEditable, isExecuting = false, o
         output: editedStep.output ?? original?.output ?? null,
       };
     });
-    onConfirm({ goal, plan: mergedSteps });
+    onConfirm({ goal, steps: mergedSteps });
   }, [steps, goal, planData, onConfirm]);
 
   return (
